@@ -1,4 +1,5 @@
 #print("CourseHub - Buoi 1")
+#làm ví dụ
 students = [
 {"id": "22000001", "name": "Nguyen Minh Anh", "major": "KHDL"},
 {"id": "22000002", "name": "Tran Duc Long", "major": "KHDL"},
@@ -65,3 +66,4 @@ def search_courses(keyword):
             results.append(course)
     return results
 print(search_courses("web"))
+
