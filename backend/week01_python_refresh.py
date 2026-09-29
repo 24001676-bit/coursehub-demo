@@ -94,7 +94,7 @@ def enroll_student(student_id, course_code):
      if (check_student == False):
          return "Sinh viên không tồn tại"
     
-    # kiểm tra khóa học có tồn tại không
+    # kiểm tra khóa học có tồn tại không, nếu tồn tại thì còn chỗ hay không
      check_course = False
      for course in courses:
         if (course_code == course["code"]):
@@ -105,10 +105,6 @@ def enroll_student(student_id, course_code):
      if (check_course == False):
           return "Khóa học không tồn tại"
 
-     # Kiểm tra lớp còn chỗ
-     # for course in courses:
-     #      if (course_code == course["code"] and course["enrolled"] >= course["capacity"]):
-     #           return "Lớp hết chỗ"
      # Kiểm tra đăng ký trùng
      for enroll in enrollments:
           if (enroll["student_id"] == student_id and enroll["course_code"]):
