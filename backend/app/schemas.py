@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+
 class EnrollmentCreate(BaseModel):
     student_id: str = Field(
         min_length=8,
@@ -11,3 +12,7 @@ class EnrollmentCreate(BaseModel):
         max_length=20,
         examples=["WEB-01"],
     )
+
+
+class CapacityUpdate(BaseModel):
+    capacity: int = Field(gt=0, description="Sức chứa phải lớn hơn 0")

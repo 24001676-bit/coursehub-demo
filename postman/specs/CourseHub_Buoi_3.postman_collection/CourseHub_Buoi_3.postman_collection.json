@@ -1,0 +1,81 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CourseHub_Buoi_3.postman_collection",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "servers": [
+    {
+      "url": ""
+    },
+    {
+      "url": "{{base_url}}"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "01 - Health",
+        "responses": {}
+      }
+    },
+    "/enrollments": {
+      "post": {
+        "summary": "07 - Create enrollment",
+        "responses": {},
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "student_id": {
+                    "type": "string",
+                    "format": "utc-millisec"
+                  },
+                  "class_section_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "student_id": "22000004",
+                "class_section_id": "WEB-01"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enrollments/22000004/WEB-01": {
+      "delete": {
+        "summary": "10 - Delete enrollment",
+        "responses": {}
+      }
+    },
+    "/sections/WEB-01/capacity": {
+      "patch": {
+        "summary": "Test_Bai3",
+        "responses": {},
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "capacity": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "capacity": 4
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
