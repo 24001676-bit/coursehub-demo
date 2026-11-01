@@ -344,3 +344,85 @@ def delete_enrollment(student_id: str, class_section_id: str) -> Response:
         connection.execute(text(event_sql), parameters)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.get(
+    "/enrollment-events",
+    status_code=status.HTTP_200_OK,
+)
+def get_enrollment_events(
+    student_id: str | None = None,
+    event_type: str | None = None,
+    skip: int = 0,
+    limit: int = 20,
+) -> list[dict]:
+    # Giới hạn limit trong khoảng từ 1 đến 100
+    if limit < 1 or limit > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Limit phai nam trong khoang tu 1 den 100",
+        )
+    if skip < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Skip khong duoc am",
+        )
+
+    sql = """
+        SELECT id, student_id, class_section_id, event_type, source, dataset, occurred_at
+        FROM enrollment_events
+        WHERE dataset = 'demo'
+    """
+    parameters: dict[str, object] = {}
+
+    if student_id:
+        sql += " AND student_id = :student_id"
+        parameters["student_id"] = student_id
+
+    if event_type:
+        sql += " AND event_type = :event_type"
+        parameters["event_type"] = event_type
+
+    sql += " ORDER BY occurred_at DESC, id DESC OFFSET :skip LIMIT :limit"
+    parameters["skip"] = skip
+    parameters["limit"] = limit
+
+    with engine.begin() as connection:
+        rows = connection.execute(text(sql), parameters).mappings().all()
+
+    return [dict(row) for row in rows]
+
+@app.post(
+    "/demo/test-rollback",
+    status_code=status.HTTP_201_CREATED,
+)
+def demo_test_rollback(payload: EnrollmentCreate) -> dict[str, str]:
+    insert_enrollment_sql = """
+        INSERT INTO enrollments (student_id, class_section_id)
+        VALUES (:student_id, :class_section_id)
+    """
+    # Cố ý chèn event_type = 'INVALID_TYPE' để vi phạm CHECK constraint
+    insert_invalid_event_sql = """
+        INSERT INTO enrollment_events
+        (student_id, class_section_id, event_type, source, dataset)
+        VALUES
+        (:student_id, :class_section_id, 'INVALID_TYPE', 'api', 'demo')
+    """
+    parameters = {
+        "student_id": payload.student_id,
+        "class_section_id": payload.class_section_id,
+    }
+
+    try:
+        with engine.begin() as connection:
+            # 1. Thêm vào bảng enrollments (Thao tác này sẽ thành công trước)
+            connection.execute(text(insert_enrollment_sql), parameters)
+            
+            # 2. Thêm vào bảng enrollment_events với dữ liệu lỗi (Sẽ gây ra lỗi tại đây)
+            connection.execute(text(insert_invalid_event_sql), parameters)
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transaction bi rollback do event_type khong hop le",
+        ) from exc
+
+    return {"message": "Thanh cong"}

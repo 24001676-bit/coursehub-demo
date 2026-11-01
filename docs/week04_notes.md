@@ -10,3 +10,5 @@
 - Execution Time sau khi tao index: ~0.15ms (Index Scan).
 
 Khong commit backend/.env.
+
+- làm thêm bài tập
