@@ -122,3 +122,36 @@ npm run preview
 ## 9. Kết luận
 
 Đã hoàn thành phần frontend React kết nối với FastAPI và PostgreSQL. Các chức năng chính đã được thực hành và kiểm tra; unit test, production build và production preview đều thành công.
+
+# Week 5 - Supplementary Exercises
+
+## Exercise 1: StudentForm
+
+- Tách form chọn sinh viên thành StudentForm.jsx.
+- Truyền dữ liệu và callback thông qua props.
+- State được quản lý tại App.jsx.
+
+## Exercise 2: Course Filter
+
+- Lọc học phần INT2204, INT2205, INT2206.
+- Kết hợp tìm kiếm và lọc theo môn học.
+- Hiển thị trạng thái khi không có kết quả.
+
+## Exercise 3: Enrollment History
+
+- API: GET /enrollment-events.
+- Hỗ trợ student_id, event_type, skip, limit.
+- Chỉ lấy dữ liệu demo.
+- Giới hạn limit từ 1 đến 100.
+- Sắp xếp occurred_at DESC, id DESC.
+- Frontend hiển thị 5 sự kiện mỗi trang.
+
+## Exercise 4: Server-side Search and Pagination
+
+- API: GET /courses.
+- q: từ khóa tìm kiếm theo mã hoặc tên học phần.
+- skip: vị trí bắt đầu lấy dữ liệu, mặc định 0.
+- limit: số bản ghi mỗi trang, mặc định 10, tối đa 100.
+- Sắp xếp ổn định bằng ORDER BY code.
+- Sử dụng SQL LIMIT và OFFSET.
+- Frontend gửi yêu cầu mới khi từ khóa hoặc trang thay đổi.

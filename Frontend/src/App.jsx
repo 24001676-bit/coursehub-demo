@@ -3,6 +3,8 @@ import { api } from "./api.js";
 import Notice from "./components/Notice.jsx";
 import SectionTable from "./components/SectionTable.jsx";
 import EnrollmentList from "./components/EnrollmentList.jsx";
+import StudentForm from "./components/StudentForm.jsx";
+import EnrollmentHistory from "./components/EnrollmentHistory.jsx";
 
 export default function App() {
   const [draftId, setDraftId] = useState("22000004");
@@ -17,6 +19,18 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState({ kind: "info", text: "" });
   const [refresh, setRefresh] = useState(0);
+  const [courseCode, setCourseCode] = useState("");
+  const [historyRows, setHistoryRows] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [historyPage, setHistoryPage] = useState(0);
+  const HISTORY_PAGE_SIZE = 5;
+  const CATALOG_PAGE_SIZE = 2;
+  const [catalogRows, setCatalogRows] = useState([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogPage, setCatalogPage] = useState(0);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,6 +66,83 @@ export default function App() {
     loadData();
     return () => controller.abort();
   }, [studentId, refresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadHistory() {
+      setHistoryLoading(true);
+      setHistoryError("");
+
+      try {
+        const skip = historyPage * HISTORY_PAGE_SIZE;
+
+        const data = await api(
+          `/enrollment-events?student_id=${encodeURIComponent(studentId)}&skip=${skip}&limit=${HISTORY_PAGE_SIZE}`,
+          { signal: controller.signal },
+        );
+
+        if (controller.signal.aborted) return;
+
+        setHistoryRows(data);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        setHistoryError(err.message);
+        setHistoryRows([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setHistoryLoading(false);
+        }
+      }
+    }
+
+    loadHistory();
+
+    return () => controller.abort();
+  }, [studentId, historyPage, refresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadCatalog() {
+      setCatalogLoading(true);
+      setCatalogError("");
+
+      try {
+        const skip = catalogPage * CATALOG_PAGE_SIZE;
+        const params = new URLSearchParams({
+          skip: String(skip),
+          limit: String(CATALOG_PAGE_SIZE),
+        });
+
+        if (catalogSearch.trim()) {
+          params.set("q", catalogSearch.trim());
+        }
+
+        const data = await api(`/courses?${params.toString()}`, {
+          signal: controller.signal,
+        });
+
+        if (controller.signal.aborted) return;
+
+        setCatalogRows(data);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        setCatalogError(err.message);
+        setCatalogRows([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setCatalogLoading(false);
+        }
+      }
+    }
+
+    loadCatalog();
+
+    return () => controller.abort();
+  }, [catalogPage, catalogSearch]);
 
   function chooseStudent(event) {
     event.preventDefault();
@@ -99,7 +190,11 @@ export default function App() {
       setBusy(false);
     }
   }
+  const allowedCourseCodes = ["INT2204", "INT2205", "INT2206"];
 
+  const filterCourses = courses.filter((course) =>
+    allowedCourseCodes.includes(course.code),
+  );
   const keyword = search.trim().toLowerCase();
   const rows = sections
     .map((section) => ({
@@ -116,9 +211,9 @@ export default function App() {
         `${row.class_id} ${row.course_code} ${row.course_name}`
           .toLowerCase()
           .includes(keyword) &&
-        (!onlyAvailable || row.remaining > 0),
+        (!onlyAvailable || row.remaining > 0) &&
+        (!courseCode || row.course_code === courseCode),
     );
-
   const disabled = loading || busy || Boolean(error);
 
   return (
@@ -135,36 +230,15 @@ export default function App() {
         nhập.
       </p>
 
-      <section className="panel">
-        <h2>1. Chọn sinh viên</h2>
-        <form className="student-form" onSubmit={chooseStudent}>
-          <label htmlFor="student-id">Mã sinh viên</label>
-          <input
-            id="student-id"
-            value={draftId}
-            maxLength={8}
-            required
-            inputMode="numeric"
-            onChange={(e) => setDraftId(e.target.value)}
-            disabled={busy}
-          />
-          <button type="submit" disabled={busy}>
-            Xem đăng ký
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={busy || loading}
-            onClick={() => setRefresh((value) => value + 1)}
-          >
-            Tải lại dữ liệu
-          </button>
-        </form>
-        <p className="muted">
-          Dữ liệu đang xem: <strong>{studentId}</strong>. Mã mẫu:
-          22000001-22000004.
-        </p>
-      </section>
+      <StudentForm
+        draftId={draftId}
+        studentId={studentId}
+        busy={busy}
+        loading={loading}
+        onDraftChange={setDraftId}
+        onSubmit={chooseStudent}
+        onReload={() => setRefresh((value) => value + 1)}
+      />
 
       <Notice kind={notice.kind}>{notice.text}</Notice>
       <Notice kind="error">{error}</Notice>
@@ -182,6 +256,22 @@ export default function App() {
                 placeholder="Ví dụ: web"
                 onChange={(e) => setSearch(e.target.value)}
               />
+              <label htmlFor="course-filter">Lọc theo môn học</label>
+
+              <select
+                id="course-filter"
+                value={courseCode}
+                onChange={(e) => setCourseCode(e.target.value)}
+              >
+                <option value="">Tất cả môn học</option>
+
+                {filterCourses.map((course) => (
+                  <option key={course.code} value={course.code}>
+                    {course.code} - {course.name}
+                  </option>
+                ))}
+              </select>
+              {/* KẾT THÚC ĐOẠN MỚI */}
               <label className="check">
                 <input
                   type="checkbox"
@@ -211,6 +301,72 @@ export default function App() {
           </section>
         </div>
       )}
+      <EnrollmentHistory
+        rows={historyRows}
+        loading={historyLoading}
+        error={historyError}
+        page={historyPage}
+        onPrevious={() => setHistoryPage((page) => Math.max(0, page - 1))}
+        onNext={() => setHistoryPage((page) => page + 1)}
+      />
+      <section className="panel">
+        <h2>5. Danh mục học phần (Server-side)</h2>
+
+        <input
+          type="text"
+          placeholder="Tìm theo mã hoặc tên học phần..."
+          value={catalogSearch}
+          onChange={(e) => {
+            setCatalogSearch(e.target.value);
+            setCatalogPage(0);
+          }}
+        />
+
+        {catalogLoading && <p>Đang tải học phần...</p>}
+
+        {catalogError && <p className="error">{catalogError}</p>}
+
+        {!catalogLoading && !catalogError && catalogRows.length === 0 && (
+          <p>Không tìm thấy học phần phù hợp.</p>
+        )}
+
+        {!catalogLoading && !catalogError && catalogRows.length > 0 && (
+          <>
+            <div>
+              {catalogRows.map((course) => (
+                <div key={course.code}>
+                  <strong>{course.code}</strong>
+                  {" - "}
+                  {course.name}
+                  <p>Số tín chỉ: {course.credits}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="pagination">
+              <button
+                type="button"
+                onClick={() => setCatalogPage((page) => Math.max(0, page - 1))}
+                disabled={catalogPage === 0 || catalogLoading}
+              >
+                Trang trước
+              </button>
+
+              <span>Trang {catalogPage + 1}</span>
+
+              <button
+                type="button"
+                onClick={() => setCatalogPage((page) => page + 1)}
+                disabled={
+                  catalogRows.length < CATALOG_PAGE_SIZE || catalogLoading
+                }
+              >
+                Trang sau
+              </button>
+            </div>
+          </>
+        )}
+      </section>
 
       <footer>
         Số chỗ và đăng ký được đọc từ API; Backend quyết định tính hợp lệ.
