@@ -13,6 +13,12 @@ jobs:
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: coursehub_test
+      DB_USER: coursehub_test
+      DB_PASSWORD: coursehub_test
 
     steps:
       - name: Checkout repository
